@@ -1,0 +1,18 @@
+evdev:atkbd:dmi:bvn*:bvr*:bd*:svnGoogle:pnEve:pvr*
+# hamburger
+ KEYBOARD_KEY_5d=compose
+# search
+ KEYBOARD_KEY_db=fn
+# assistant
+ KEYBOARD_KEY_d8=leftmeta
+# back
+ KEYBOARD_KEY_3b=back
+ KEYBOARD_KEY_3c=refresh
+ KEYBOARD_KEY_3d=f11
+ KEYBOARD_KEY_3e=leftmeta
+ KEYBOARD_KEY_3f=brightnessdown
+ KEYBOARD_KEY_40=brightnessup
+ KEYBOARD_KEY_41=play
+ KEYBOARD_KEY_42=mute
+ KEYBOARD_KEY_43=volumedown
+ KEYBOARD_KEY_44=volumeup
