@@ -19,6 +19,8 @@
 
 #define AVGPERIOD 10
 #define SAMPLERATE 5
+#define INACTIVE_TIMEOUT 10
+#define ENABLE_TIMEOUT 1
 
 //#define DEBUG(...)
 #define DEBUG(...) printf(__VA_ARGS__)
@@ -149,15 +151,35 @@ static int find_sensor(void)
 	return ret;
 }
 
+static int write_pidfile(void)
+{
+	FILE *f = fopen("/run/pbkbd-backlight.pid", "w");
+	if (f == NULL)
+		return 1;
+	fprintf(f, "%d\n", (int) getpid());
+	fclose(f);
+	return 0;
+}
+
 static int keeploop = 1;
+static int update_timeout = 0;
 
 static void sighandler(int sig)
 {
-	keeploop = 0;
+	if (sig == SIGHUP) {
+		update_timeout = 1;
+	} else {
+		keeploop = 0;
+	}
 }
 
 int main(void)
 {
+	if (write_pidfile()) {
+		puts("cannot write pidfile");
+		return 1;
+	}
+
 	int sensor = find_sensor();
 
 	if (sensor < 0)
@@ -172,43 +194,66 @@ int main(void)
 
 	const size_t avgsz = AVGPERIOD * SAMPLERATE;
 	int luxbuf[avgsz];
-	int bufready = 0;
+	memset(luxbuf, 0, sizeof(luxbuf));
 	int bufidx = 0;
 	long long bufsum = 0;
 
 	int waitenable = 0;
+	time_t timeout = time(NULL) + INACTIVE_TIMEOUT;
+	double lastbl = 0;
 
 	while (keeploop) {
 		int lux = readnum(sensor, LIGHT_PROP);
-		if (bufready)
-			bufsum -= luxbuf[bufidx];
+		bufsum -= luxbuf[bufidx];
 		luxbuf[bufidx] = lux;
 		bufsum += lux;
-		DEBUG("read raw %d into idx %d ready %d sum %lld avg %lf\n", lux, bufidx, bufready, bufsum, (double) bufsum / avgsz);
-		if (bufidx == avgsz - 1) {
+		DEBUG("read raw %d into idx %d sum %lld avg %lf\n", lux, bufidx, bufsum, (double) bufsum / avgsz);
+		if (bufidx == avgsz - 1)
 			bufidx = 0;
-			if (!bufready)
-				bufready = 1;
-		} else {
+		else
 			bufidx += 1;
-		}
-		if (bufready) {
-			double lux = (double) bufsum / avgsz;
-			if (!waitenable || lux <= reenable_threshold) {
-				double bl = 0;
-				if (lux >= disable_threshold) {
-					waitenable = 1;
-				} else {
-					waitenable = 0;
-					bl = get_bl(lux);
-				}
-				set_backlight(bl);
+		double alux = (double) bufsum / avgsz;
+		if (!waitenable || alux <= reenable_threshold) {
+			double bl = 0;
+			if (alux >= disable_threshold) {
+				waitenable = 1;
+			} else {
+				waitenable = 0;
+				bl = get_bl(alux);
 			}
+			set_backlight(bl);
+			lastbl = bl;
 		}
 		struct timespec ts = {
 			.tv_nsec = 1000000000 / SAMPLERATE - 1
 		};
 		clock_nanosleep(CLOCK_REALTIME, 0, &ts, NULL);
+
+		if (update_timeout) {
+			timeout = time(NULL) + INACTIVE_TIMEOUT;
+			update_timeout = 0;
+		}
+		if (ENABLE_TIMEOUT && timeout < time(NULL)) {
+			DEBUG("IDLE detected\n");
+			double bl;
+			for (bl = lastbl; bl > 0; bl -= 0.01) {
+				set_backlight(bl);
+				struct timespec ts = {
+					.tv_nsec = 10000000
+				};
+				clock_nanosleep(CLOCK_REALTIME, 0, &ts, NULL);
+			}
+			set_backlight(0.01);
+			if (!update_timeout && keeploop)
+				pause();
+			DEBUG("leaving IDLE\n");
+			/*
+			memset(luxbuf, 0, sizeof(luxbuf));
+			bufidx = 0;
+			bufsum = 0;
+			waitenable = 0;
+			*/
+		}
 	}
 
 	close(sensor);

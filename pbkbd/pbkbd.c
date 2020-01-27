@@ -299,6 +299,34 @@ static int event_input(int scan, int release,
 	return 0;
 }
 
+static int notify_backlight(void)
+{
+	static time_t last_notify_sent = 0;
+	time_t now = time(NULL);
+	if (now == last_notify_sent)
+		return 0;
+	last_notify_sent = now;
+	FILE *f = fopen("/run/pbkbd-backlight.pid", "r");
+	if (f == NULL)
+		return 1;
+
+	struct stat st;
+	if (fstat(fileno(f), &st) ||
+			!S_ISREG(st.st_mode) ||
+			st.st_uid != 0 ||
+			st.st_gid != 0 ||
+			(st.st_mode & 022)) {
+		/* unsafe */
+		fclose(f);
+		return 1;
+	}
+	int pid;
+	fscanf(f, "%d", &pid);
+	int r = kill(pid, SIGHUP);
+	fclose(f);
+	return r;
+}
+
 static int translate_daemon(struct libevdev *kbd,
 		struct libevdev_uinput *uinput, struct libevdev_uinput *uinputfn)
 {
@@ -341,6 +369,7 @@ static int translate_daemon(struct libevdev *kbd,
 				event_input(scancode, scanvalue == 0, uinput, uinputfn);
 			scancode = -1;
 			scanvalue = -1;
+			notify_backlight();
 			break;
 		case EV_KEY:
 			LOG(DEBUG4, "KEY code 0x%x %s\n", ev.code,
