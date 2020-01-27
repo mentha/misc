@@ -22,8 +22,8 @@
 #define INACTIVE_TIMEOUT 10
 #define ENABLE_TIMEOUT 1
 
-//#define DEBUG(...)
-#define DEBUG(...) printf(__VA_ARGS__)
+#define DEBUG(...)
+//#define DEBUG(...) printf(__VA_ARGS__)
 
 #ifndef O_SEARCH /* glibc hack */
 # define O_SEARCH 0
@@ -35,8 +35,8 @@ struct lux_mapping_entry {
 };
 
 const struct lux_mapping_entry lux_mapping[] = {
-	{ 0, 0.01 },
-	{ 0.5, 0.3 },
+	{ 0, 0.1 },
+	{ 1, 0.3 },
 	{ 5, 0.8 },
 	{ 10, 1 }
 };
@@ -101,7 +101,10 @@ static void set_backlight(double v)
 	long long bri = readnum(d, "max_brightness");
 	if (bri < 0)
 		goto exit_close_d;
-	writenum(d, "brightness", ROUND(v * bri));
+	long long wv = ROUND(v * bri);
+	if (wv <= 0)
+		wv = 1;
+	writenum(d, "brightness", wv);
 
 exit_close_d:
 	close(d);
@@ -159,6 +162,11 @@ static int write_pidfile(void)
 	fprintf(f, "%d\n", (int) getpid());
 	fclose(f);
 	return 0;
+}
+
+static void clean_pidfile(void)
+{
+	unlink("/run/pbkbd-backlight.pid");
 }
 
 static int keeploop = 1;
@@ -257,6 +265,8 @@ int main(void)
 	}
 
 	close(sensor);
+
+	clean_pidfile();
 
 	return 0;
 }
