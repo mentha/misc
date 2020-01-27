@@ -91,18 +91,17 @@ const int keymap_fn[] = {
 	[0x0c] = KEY_F11, /* - */
 	[0x0d] = KEY_F12, /* = */
 	[0x0e] = KEY_DELETE, /* backspace */
-	[0x2a] = KEY_CAPSLOCK, /* left shift */
-	[0xc8] = KEY_PAGEUP, /* up */
-	[0xcb] = KEY_HOME, /* left */
-	[0xcd] = KEY_END, /* right */
-	[0xd0] = KEY_PAGEDOWN, /* down */
+	[0x0f] = KEY_CAPSLOCK, /* tab */
 	[0x23] = -1, /* h, first combo */
 	[0x24] = -2, /* j */
 	[0x25] = -3, /* k */
 	[0x26] = -4, /* l */
+	[0xc8] = KEY_PAGEUP, /* up */
+	[0xcb] = KEY_HOME, /* left */
+	[0xcd] = KEY_END, /* right */
+	[0xd0] = KEY_PAGEDOWN, /* down */
 
 #if 0
-	[0x0f] = KEY_TAB,
 	[0x10] = KEY_Q,
 	[0x11] = KEY_W,
 	[0x12] = KEY_E,
@@ -125,6 +124,7 @@ const int keymap_fn[] = {
 	[0x27] = KEY_SEMICOLON,
 	[0x28] = KEY_APOSTROPHE,
 	[0x29] = KEY_GRAVE,
+	[0x2a] = KEY_LEFTSHIFT,
 	[0x2b] = KEY_BACKSLASH,
 	[0x2c] = KEY_Z,
 	[0x2d] = KEY_X,

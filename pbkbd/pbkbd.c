@@ -20,6 +20,7 @@
 #define UINPUTPATH "/dev/uinput"
 #define UINPUTLOADMODULE "modprobe uinput"
 #define UINPUT_MANAGED
+#define ALLOW_DIRECT_WITH_FNKEY
 
 static void print_help(const char *progname)
 {
@@ -258,16 +259,24 @@ static int event_input(int scan, int release,
 			fnactive = false;
 		}
 	} else if (!release && fnactive) {
-		fnpressed[scan] = true;
 		fnactivated = true;
 		int k = keymap_fn[scan];
 		if (k > 0) {
+			fnpressed[scan] = true;
 			event_emit(uinputfn, scan, k, 0);
 		} else if (k < 0) {
+			fnpressed[scan] = true;
 			const int *combo = keymap_combo[-1 - k];
 			for (; *combo > 0; combo++)
 				event_emit(uinputfn, scan, *combo, 0);
 		}
+#ifdef ALLOW_DIRECT_WITH_FNKEY
+		else {
+			int k = keymap_direct[scan];
+			if (k > 0)
+				event_emit(uinput, scan, k, release);
+		}
+#endif
 	} else if (release && fnpressed[scan]) {
 		fnpressed[scan] = false;
 		int k = keymap_fn[scan];
@@ -286,7 +295,6 @@ static int event_input(int scan, int release,
 		int k = keymap_direct[scan];
 		if (k > 0)
 			event_emit(uinput, scan, k, release);
-		return 0;
 	}
 	return 0;
 }
