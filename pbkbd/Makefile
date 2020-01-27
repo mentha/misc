@@ -1,10 +1,9 @@
-PKGS       = libevdev
-PKGCFLAGS != pkg-config --cflags $(PKGS)
-PKGLDLIBS != pkg-config --libs $(PKGS)
-CFLAGS    := $(PKGCFLAGS) -Wall -Os
-LDLIBS    := $(PKGLDLIBS)
+KBDPKGS       = libevdev
+KBDPKGCFLAGS != pkg-config --cflags $(KBDPKGS)
+KBDPKGLDLIBS != pkg-config --libs $(KBDPKGS)
+CFLAGS    := -Wall -Os
 
-all: pbkbd
+all: pbkbd pbkbd-backlight
 
 pbkbd: pbkbd.c keymap.h
-	$(CC) $(CFLAGS) -o $@ pbkbd.c $(LDLIBS)
+	$(CC) $(CFLAGS) $(KBDPKGCFLAGS) -o $@ pbkbd.c $(KBDPKGLDLIBS)
