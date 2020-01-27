@@ -18,10 +18,10 @@
 #define LIGHT_PROP "in_illuminance_input"
 
 #define AVGPERIOD 10
-#define SAMPLERATE 10
+#define SAMPLERATE 5
 
-#define DEBUG(...)
-//#define DEBUG(...) printf(__VA_ARGS__)
+//#define DEBUG(...)
+#define DEBUG(...) printf(__VA_ARGS__)
 
 #ifndef O_SEARCH /* glibc hack */
 # define O_SEARCH 0
@@ -41,6 +41,7 @@ const struct lux_mapping_entry lux_mapping[] = {
 const size_t lux_mapping_size = sizeof(lux_mapping) / sizeof(struct lux_mapping_entry);
 #define LUX(i) lux_mapping[i].lux
 #define BRI(i) lux_mapping[i].bri
+const double disable_threshold = 10;
 const double reenable_threshold = 5; /* lux must fall below this to reenable lights */
 
 #define ROUND(d) ((long long) ((d) + 0.5))
@@ -183,7 +184,7 @@ int main(void)
 			bufsum -= luxbuf[bufidx];
 		luxbuf[bufidx] = lux;
 		bufsum += lux;
-		DEBUG("read raw %d into idx %d ready %d sum %lld\n", lux, bufidx, bufready, bufsum);
+		DEBUG("read raw %d into idx %d ready %d sum %lld avg %lf\n", lux, bufidx, bufready, bufsum, (double) bufsum / avgsz);
 		if (bufidx == avgsz - 1) {
 			bufidx = 0;
 			if (!bufready)
@@ -194,10 +195,14 @@ int main(void)
 		if (bufready) {
 			double lux = (double) bufsum / avgsz;
 			if (!waitenable || lux <= reenable_threshold) {
-				double bl = get_bl(lux);
-				set_backlight(bl);
-				if (bl == 0)
+				double bl = 0;
+				if (lux >= disable_threshold) {
 					waitenable = 1;
+				} else {
+					waitenable = 0;
+					bl = get_bl(lux);
+				}
+				set_backlight(bl);
 			}
 		}
 		struct timespec ts = {
