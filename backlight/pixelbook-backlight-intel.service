@@ -1,0 +1,11 @@
+[Unit]
+Description=Smoothen backlight change on Pixelbook
+Before=multi-user.target
+ConditionPathExists=/sys/class/backlight/intel_backlight
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/smoothbacklightfs /sys/class/backlight/intel_backlight
+
+[Install]
+WantedBy=multi-user.target
